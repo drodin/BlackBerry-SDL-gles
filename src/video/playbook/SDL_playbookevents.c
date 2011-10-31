@@ -40,11 +40,13 @@ struct TouchState {
 	int moveId;
 	int leftDown;
 	int leftId;
+	int middleDown;
+	int middleId;
 	int rightDown;
 	int rightId;
 };
 
-static struct TouchState state = { {0, 0}, {0, 0}, 0, -1, 0, -1, 0, -1};
+static struct TouchState state = { {0, 0}, {0, 0}, 0, -1, 0, -1, 0, -1, 0, -1};
 #endif
 struct TouchEvent {
 	int pending;
@@ -513,7 +515,7 @@ static void handleMtouchEvent(screen_event_t event, screen_window_t window, int 
 #ifdef TOUCHPAD_SIMULATE
 
 	unsigned buttonWidth = 200;
-	unsigned buttonHeight = 300;
+	unsigned buttonHeight = 200;
 
 	int contactId;
 	int pos[2];
@@ -532,6 +534,13 @@ static void handleMtouchEvent(screen_event_t event, screen_window_t window, int 
 		}
 		return;
 	}
+	if (state.middleId == contactId) {
+		if (type == SCREEN_EVENT_MTOUCH_RELEASE) {
+			state.middleId = -1;
+			SDL_PrivateMouseButton(SDL_RELEASED, SDL_BUTTON_MIDDLE, mouseX, mouseY);
+		}
+		return;
+	}
 	if (state.rightId == contactId) {
 		if (type == SCREEN_EVENT_MTOUCH_RELEASE) {
 			state.rightId = -1;
@@ -544,19 +553,27 @@ static void handleMtouchEvent(screen_event_t event, screen_window_t window, int 
 		// Special handling for buttons
 
 		if (screenPos[1] < buttonHeight) {
-			// Left button
+			// Middle button
 			if (type == SCREEN_EVENT_MTOUCH_TOUCH) {
-				if (state.leftId == -1 && contactId != state.rightId) {
-					SDL_PrivateMouseButton(SDL_PRESSED, SDL_BUTTON_LEFT, mouseX, mouseY);
-					state.leftId = contactId;
+				if (state.middleId == -1 && contactId != state.rightId && contactId != state.leftId) {
+					SDL_PrivateMouseButton(SDL_PRESSED, SDL_BUTTON_MIDDLE, mouseX, mouseY);
+					state.middleId = contactId;
+				}
+			}
+		} else if (screenPos[1] < buttonHeight*2){
+			// Right button
+			if (type == SCREEN_EVENT_MTOUCH_TOUCH) {
+				if (state.rightId == -1 && contactId != state.leftId && contactId != state.middleId) {
+					SDL_PrivateMouseButton(SDL_PRESSED, SDL_BUTTON_RIGHT, mouseX, mouseY);
+					state.rightId = contactId;
 				}
 			}
 		} else {
-			// Right button
+			// Left button
 			if (type == SCREEN_EVENT_MTOUCH_TOUCH) {
-				if (state.rightId == -1 && contactId != state.leftId) {
-					SDL_PrivateMouseButton(SDL_PRESSED, SDL_BUTTON_RIGHT, mouseX, mouseY);
-					state.rightId = contactId;
+				if (state.leftId == -1 && contactId != state.rightId && contactId != state.middleId) {
+					SDL_PrivateMouseButton(SDL_PRESSED, SDL_BUTTON_LEFT, mouseX, mouseY);
+					state.leftId = contactId;
 				}
 			}
 		}
@@ -586,6 +603,8 @@ static void handleMtouchEvent(screen_event_t event, screen_window_t window, int 
 			int mask = 0;
 			if (state.leftDown)
 				mask |= SDL_BUTTON_LEFT;
+			if (state.middleDown)
+				mask |= SDL_BUTTON_MIDDLE;
 			if (state.rightDown)
 				mask |= SDL_BUTTON_RIGHT;
 			state.mask = mask;

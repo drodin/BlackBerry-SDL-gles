@@ -46,6 +46,8 @@
 #include "SDL_playbookevents_c.h"
 #include "SDL_playbookyuv_c.h"
 
+#include "SDL_playbookgl_c.h"
+
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
@@ -123,6 +125,12 @@ static SDL_VideoDevice *PLAYBOOK_CreateDevice(int devindex)
 	device->UnlockHWSurface = PLAYBOOK_UnlockHWSurface;
 	device->FlipHWSurface = PLAYBOOK_FlipHWSurface;
 	device->FreeHWSurface = PLAYBOOK_FreeHWSurface;
+#if SDL_VIDEO_OPENGL
+	device->GL_MakeCurrent = Playbook_GL_MakeCurrent;
+	device->GL_SwapBuffers = Playbook_GL_SwapBuffers;
+	device->GL_LoadLibrary = Playbook_GL_LoadLibrary;
+	device->GL_GetProcAddress = Playbook_GL_GetProcAddress;
+#endif	/* Have OpenGL */
 	device->SetCaption = NULL;
 	device->SetIcon = NULL;
 	device->IconifyWindow = NULL;
@@ -279,6 +287,7 @@ struct private_hwdata {
 SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 				int width, int height, int bpp, Uint32 flags)
 {
+	int usage;
 	screen_window_t screenWindow;
 	int rc = 0;
 	fprintf(stderr, "SetVideoMode: %dx%d %dbpp\n", width, height, bpp);
@@ -347,7 +356,10 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 		return NULL;
 	}
 
-	int usage = SCREEN_USAGE_NATIVE | SCREEN_USAGE_READ | SCREEN_USAGE_WRITE; // FIXME: GL needs other usage
+	if (flags & SDL_OPENGL)
+		usage = SCREEN_USAGE_OPENGL_ES1 | SCREEN_USAGE_ROTATION;
+	else
+		usage = SCREEN_USAGE_NATIVE | SCREEN_USAGE_READ | SCREEN_USAGE_WRITE;
 	rc = screen_set_window_property_iv(screenWindow, SCREEN_PROPERTY_USAGE, &usage);
 	if (rc) {
 		SDL_SetError("Cannot set window usage: %s", strerror(errno));
@@ -384,6 +396,14 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 
 	_priv->frontBuffer = windowBuffer[0];
 	_priv->screenWindow = screenWindow;
+
+	if ( flags & SDL_OPENGL ) {
+		if ( Playbook_GL_Init(this) == 0 ) {
+			current->flags |= SDL_OPENGL;
+		} else {
+			current = NULL;
+		}
+	}
 
 	current->hwdata = SDL_malloc(sizeof(struct private_hwdata));
 	current->hwdata->pixmap = 0;

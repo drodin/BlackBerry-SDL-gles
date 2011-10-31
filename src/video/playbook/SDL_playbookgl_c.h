@@ -19,38 +19,28 @@
     Sam Lantinga
     slouken@libsdl.org
 */
+
+/* AGL implementation of SDL OpenGL support */
+
 #include "SDL_config.h"
 
-#ifndef _SDL_playbookvideo_h
-#define _SDL_playbookvideo_h
+#if SDL_VIDEO_OPENGL
+#include "SDL_opengl.h"
+#endif /* SDL_VIDEO_OPENGL */
 
-#include "../SDL_sysvideo.h"
+#include <EGL/egl.h>
 #include <screen/screen.h>
 
-/* Hidden "this" pointer for the video functions */
-#define _THIS	SDL_VideoDevice *this
-#define _priv   this->hidden
+#include "SDL_playbookvideo.h"
 
-#define SDL_NUMMODES 3
-
-/* Private display data */
-
-struct SDL_PrivateVideoData {
-    int w, h;
-    void *buffer;
-    screen_context_t screenContext;
-    screen_event_t screenEvent;
-    screen_window_t screenWindow;
-    screen_buffer_t frontBuffer;
-    SDL_Surface *surface;
-    void* pixels;
-    int pitch;
-
-    SDL_Rect *SDL_modelist[SDL_NUMMODES+1];
-
+/* OpenGL functions */
+extern int Playbook_GL_Init(_THIS);
+extern void Playbook_GL_Quit(_THIS);
 #if SDL_VIDEO_OPENGL
-	void *libraryHandle;
+extern int Playbook_GL_MakeCurrent(_THIS);
+extern void Playbook_GL_SwapBuffers(_THIS);
+extern int Playbook_GL_LoadLibrary(_THIS, const char *location);
+extern void Playbook_GL_UnloadLibrary(_THIS);
+extern void* Playbook_GL_GetProcAddress(_THIS, const char *proc);
 #endif
-};
 
-#endif /* _SDL_playbookvideo_h */

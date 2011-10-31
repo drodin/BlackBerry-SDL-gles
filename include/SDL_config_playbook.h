@@ -107,8 +107,8 @@
 /* Enable the QNX cdrom driver (src/cdrom/dummy/\*.c) */
 #define SDL_CDROM_QNX	1
 
-/* Enable the stub joystick driver (src/joystick/dummy/\*.c) */
-#define SDL_JOYSTICK_DISABLED	1
+/* Enable the stub joystick driver (src/joystick/playbook/\*.c) */
+#define SDL_JOYSTICK_PLAYBOOK	1
 
 /* Enable the dlopen shared object loader (src/loadso/dlopen/\*.c) */
 #define SDL_LOADSO_DLOPEN	1
@@ -121,5 +121,8 @@
 
 /* Enable the dummy video driver (src/video/playbook/\*.c) */
 #define SDL_VIDEO_DRIVER_PLAYBOOK	1
+
+/* Enable OpenGL support */
+#define SDL_VIDEO_OPENGL	1
 
 #endif /* _SDL_config_minimal_h */
