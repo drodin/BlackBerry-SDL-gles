@@ -42,6 +42,8 @@
 #elif defined(__MACOS__)
 #include <gl.h>		/* Header File For The OpenGL Library */
 #include <glu.h>	/* Header File For The GLU Library */
+#elif defined(__PLAYBOOK__)
+#include <GLES/gl.h>	/* Header File For The OpenGL ES Library */
 #else
 #include <GL/gl.h>	/* Header File For The OpenGL Library */
 #include <GL/glu.h>	/* Header File For The GLU Library */
@@ -3108,8 +3110,13 @@ extern "C" {
 typedef char GLchar;			/* native character */
 #endif
 
+#if defined(GL_VERSION_ES_CM_1_0) || defined(GL_VERSION_ES_CL_1_0) || defined(GL_VERSION_ES_CM_1_1) || defined(GL_VERSION_ES_CL_1_1)
+#define GLdouble double
+#define GLclampd double
+#define GL_ALL_ATTRIB_BITS 0x000fffff
+#define GL_UNPACK_ROW_LENGTH 0x0CF2
+#else
 #ifndef GL_VERSION_1_5
-#if !defined(GL_VERSION_ES_CM_1_0) && !defined(GL_VERSION_ES_CL_1_0) && !defined(GL_VERSION_ES_CM_1_1) && !defined(GL_VERSION_ES_CL_1_1)
 /* GL types for handling large vertex buffer objects */
 typedef ptrdiff_t GLintptr;
 typedef ptrdiff_t GLsizeiptr;

@@ -51,8 +51,6 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
-#include <fcntl.h> // O_RDWR
-#include <sys/pps.h>
 
 #define PLAYBOOKVID_DRIVER_NAME "playbook"
 
@@ -149,47 +147,6 @@ VideoBootStrap PLAYBOOK_bootstrap = {
 	PLAYBOOK_Available, PLAYBOOK_CreateDevice
 };
 
-static int requestSwipeStart()
-{
-	int ret = 0;
-	int navFD = open("/pps/services/navigator/control", O_RDWR);
-	if (navFD < 0)
-		return -1;
-
-	pps_encoder_t* encoder = (pps_encoder_t *)malloc(sizeof(pps_encoder_t));
-	if (!encoder) {
-		ret = -1;
-		goto cleanup1;
-	}
-
-	pps_encoder_initialize(encoder, false);
-	if (PPS_ENCODER_OK != pps_encoder_add_string(encoder, "msg", "SWIPE_START")) {
-		ret = -1;
-		goto cleanup2;
-	}
-	if (PPS_ENCODER_OK != pps_encoder_add_string(encoder, "dat", "true")) {
-		ret = -1;
-		goto cleanup2;
-	}
-
-#ifdef DEBUG_PPS
-	fprintf(stderr, "Sending to PPS object: (length %d)\n", pps_encoder_length(encoder));
-	for (i=0; i<pps_encoder_length(encoder); i++) {
-		fprintf(stderr, "%c", pps_encoder_buffer(encoder)[i]);
-	}
-	fprintf(stderr, "\n");
-#endif
-
-	write(navFD, pps_encoder_buffer(encoder), pps_encoder_length(encoder));
-
-cleanup2:
-	pps_encoder_cleanup(encoder);
-	free(encoder);
-cleanup1:
-	close(navFD);
-	return ret;
-}
-
 int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
 {
 	int i;
@@ -203,13 +160,6 @@ int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	rc = screen_create_event(&_priv->screenEvent);
 	if (rc) {
 		SDL_SetError("Cannot create event object: %s", strerror(errno));
-		screen_destroy_context(_priv->screenContext);
-		return -1;
-	}
-
-	if (requestSwipeStart() < 0) {
-		SDL_SetError("Cannot connect to navigator: %s", strerror(errno));
-		screen_destroy_event(_priv->screenEvent);
 		screen_destroy_context(_priv->screenContext);
 		return -1;
 	}

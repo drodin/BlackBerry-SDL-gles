@@ -21,7 +21,7 @@
 */
 #include "SDL_config.h"
 
-#if defined(SDL_JOYSTICK_PLAYBOOK) || defined(SDL_JOYSTICK_DISABLED)
+#if defined(SDL_JOYSTICK_PLAYBOOK)
 
 #include <bps/accelerometer.h>
 
@@ -30,6 +30,9 @@
 #include "SDL_joystick.h"
 #include "../SDL_sysjoystick.h"
 #include "../SDL_joystick_c.h"
+
+#define AXIS_MAX 32767
+#define JDELTA 0.005f
 
 static int joystickReset = 0;
 static int orientation_angle = 0;
@@ -44,7 +47,7 @@ int SDL_SYS_JoystickInit(void)
     accelerometer_set_update_frequency(FREQ_40_HZ);
 
 	SDL_numjoysticks = 1;
-	return(0);
+	return(SDL_numjoysticks);
 }
 
 /* Function to get the device-dependent name of a joystick */
@@ -73,7 +76,6 @@ int SDL_SYS_JoystickOpen(SDL_Joystick *joystick)
 void SDL_SYS_JoystickUpdate(SDL_Joystick *joystick)
 {
 	static double next_jx, next_jy, prev_jx, prev_jy;
-	const double jyadja = 50;
 
 	if (joystickReset) {
 		next_jx = 0.0f;
@@ -86,22 +88,16 @@ void SDL_SYS_JoystickUpdate(SDL_Joystick *joystick)
 	double x, y, z;
 	accelerometer_read_forces(&x, &y, &z);
 
-	double roll = ACCELEROMETER_CALCULATE_ROLL(x, y, z);
-	double pitch = ACCELEROMETER_CALCULATE_PITCH(x, y, z);
-
-	double horizontal = sin(abs(roll) * M_PI / 180) * 0.5f;
-	double vertical = sin((abs(pitch)-jyadja) * M_PI / 180) * 0.5f;
-
-	if (roll < 0)
-		horizontal = - horizontal;
+	double roll = ACCELEROMETER_CALCULATE_ROLL(x, y, z)/90;
+	double pitch = ACCELEROMETER_CALCULATE_PITCH(x, y, z)/90;
 
 	//Account for axis change due to different starting orientations
     if (orientation_angle == 180) {
-        next_jx = -horizontal;
-    	next_jy = vertical;
+        next_jx = -roll;
+    	next_jy = pitch;
     } else {
-        next_jx = horizontal;
-        next_jy = vertical;
+        next_jx = roll;
+        next_jy = pitch;
     }
 
 //#define JOYKEYB_SIMULATE 1
@@ -156,12 +152,12 @@ void SDL_SYS_JoystickUpdate(SDL_Joystick *joystick)
 		last_ykeysym = ykeysym;
 	}
 #else
-	const double jdelta = 0.005f;
-	const double jamp = 8;
-	if (fabs(next_jx) > (fabs(prev_jx)+jdelta) || fabs(next_jx) < (fabs(prev_jx)-jdelta))
-		SDL_PrivateJoystickAxis(joystick, 0, next_jx * jamp * 32768);
-	if (fabs(next_jy) > (fabs(prev_jy)+jdelta) || fabs(next_jy) < (fabs(prev_jy)-jdelta))
-		SDL_PrivateJoystickAxis(joystick, 1, next_jy * jamp * 32768);
+	if (fabs(next_jx) > (fabs(prev_jx)+JDELTA) || fabs(next_jx) < (fabs(prev_jx)-JDELTA)) {
+		SDL_PrivateJoystickAxis(joystick, 0, next_jx * AXIS_MAX);
+	}
+	if (fabs(next_jy) > (fabs(prev_jy)+JDELTA) || fabs(next_jy) < (fabs(prev_jy)-JDELTA)) {
+		SDL_PrivateJoystickAxis(joystick, 1, next_jy * AXIS_MAX);
+	}
 #endif
 
 	prev_jy = next_jy;

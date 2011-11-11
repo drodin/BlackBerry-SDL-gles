@@ -213,7 +213,11 @@ void Playbook_GL_SwapBuffers(_THIS)
 int Playbook_GL_LoadLibrary(_THIS, const char *location)
 {
 	if (location == NULL)
-		location = "./app/native/lib/libGLESwrapper.so";
+#ifdef USE_GLES_WRAPPER
+		location = "libGLESwrapper.so";
+#else
+		location = "libGLESv1_CM.so";
+#endif
 
 	this->hidden->libraryHandle = SDL_LoadObject(location);
 
@@ -224,14 +228,19 @@ int Playbook_GL_LoadLibrary(_THIS, const char *location)
 void Playbook_GL_UnloadLibrary(_THIS)
 {
 	SDL_UnloadObject(this->hidden->libraryHandle);
-
 	this->hidden->libraryHandle = NULL;
 	this->gl_config.driver_loaded = 0;
+}
+
+void Playbook_GL_NoProcWarning() {
+	printf("Warning: GL proc undefined!\n");
+	flushall();
 }
 
 void* Playbook_GL_GetProcAddress(_THIS, const char *proc)
 {
 	void* adr = NULL;
+#ifdef USE_GLES_WRAPPER
 	size_t len = 1+SDL_strlen(proc)+1;
 	char *xproc = SDL_stack_alloc(char, len);
 	xproc[0] = 'x';
@@ -242,6 +251,13 @@ void* Playbook_GL_GetProcAddress(_THIS, const char *proc)
 		adr = SDL_LoadFunction( this->hidden->libraryHandle, proc );
 	}
 	SDL_stack_free(xproc);
+#else
+	adr = SDL_LoadFunction( this->hidden->libraryHandle, proc );
+	if (adr == NULL) {
+		SDL_ClearError();
+		adr = *Playbook_GL_NoProcWarning;
+	}
+#endif
 	return adr;
 }
 
