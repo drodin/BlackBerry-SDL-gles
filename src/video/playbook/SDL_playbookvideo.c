@@ -149,18 +149,11 @@ VideoBootStrap PLAYBOOK_bootstrap = {
 
 int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
 {
-	int i;
+	int i, rc;
 
-	int rc = screen_create_context(&_priv->screenContext, 0);
+	rc = screen_create_context(&_priv->screenContext, 0);
 	if (rc) {
 		SDL_SetError("Cannot create screen context: %s", strerror(errno));
-		return -1;
-	}
-
-	rc = screen_create_event(&_priv->screenEvent);
-	if (rc) {
-		SDL_SetError("Cannot create event object: %s", strerror(errno));
-		screen_destroy_context(_priv->screenContext);
 		return -1;
 	}
 
@@ -168,7 +161,6 @@ int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	rc = screen_get_context_property_pv(_priv->screenContext, SCREEN_PROPERTY_DISPLAYS, (void**)&displays);
 	if (rc) {
 		SDL_SetError("Cannot get current display: %s", strerror(errno));
-		screen_destroy_event(_priv->screenEvent);
 		screen_destroy_context(_priv->screenContext);
 		return -1;
 	}
@@ -177,7 +169,29 @@ int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	rc = screen_get_display_property_iv(displays[0], SCREEN_PROPERTY_NATIVE_RESOLUTION, screenResolution);
 	if (rc) {
 		SDL_SetError("Cannot get native resolution: %s", strerror(errno));
-		screen_destroy_event(_priv->screenEvent);
+		screen_destroy_context(_priv->screenContext);
+		return -1;
+	}
+
+    rc = bps_initialize();
+	if (rc) {
+		SDL_SetError("Cannot initializes the BPS library: %s", strerror(errno));
+		screen_destroy_context(_priv->screenContext);
+		return -1;
+	}
+
+    rc = navigator_request_events(0);
+	if (rc) {
+		SDL_SetError("Cannot request navigator events: %s", strerror(errno));
+		bps_shutdown();
+		screen_destroy_context(_priv->screenContext);
+		return -1;
+	}
+
+    rc = navigator_rotation_lock(true);
+	if (rc) {
+		SDL_SetError("Cannot set navigator rotation lock: %s", strerror(errno));
+		bps_shutdown();
 		screen_destroy_context(_priv->screenContext);
 		return -1;
 	}
@@ -355,6 +369,8 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 		}
 	}
 
+	screen_request_events(_priv->screenContext);
+
 	current->hwdata = SDL_malloc(sizeof(struct private_hwdata));
 	current->hwdata->pixmap = 0;
 	current->hwdata->window = screenWindow;
@@ -368,6 +384,7 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 	current->flags &= ~SDL_RESIZABLE; /* no resize for Direct Context */
 	current->flags |= SDL_FULLSCREEN;
 	current->flags |= SDL_HWSURFACE;
+	current->flags |= SDL_PREALLOC;
 	current->w = width;
 	current->h = height;
 	current->pitch = _priv->pitch;
@@ -574,10 +591,12 @@ void PLAYBOOK_VideoQuit(_THIS)
 //		SDL_free(_priv->buffer);
 //		_priv->buffer = 0;
 //	}
+	Playbook_GL_Quit(this);
 	if (_priv->screenWindow) {
 		screen_destroy_window_buffers(_priv->screenWindow);
 		screen_destroy_window(_priv->screenWindow);
 	}
-	screen_destroy_event(_priv->screenEvent);
+	screen_stop_events(_priv->screenContext);
+	bps_shutdown();
 	screen_destroy_context(_priv->screenContext);
 }

@@ -26,6 +26,9 @@
 
 #include "../SDL_sysvideo.h"
 #include <screen/screen.h>
+#include <bps/bps.h>
+#include <bps/navigator.h>
+#include <bps/screen.h>
 
 /* Hidden "this" pointer for the video functions */
 #define _THIS	SDL_VideoDevice *this

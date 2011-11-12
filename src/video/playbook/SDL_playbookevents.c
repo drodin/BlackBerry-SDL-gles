@@ -31,6 +31,8 @@
 static SDL_keysym Playbook_Keycodes[256];
 static SDLKey *Playbook_specialsyms;
 
+static SDL_keysym navkey;
+
 //#define TOUCHPAD_SIMULATE 1 // Still experimental
 #ifdef TOUCHPAD_SIMULATE
 struct TouchState {
@@ -675,51 +677,90 @@ static void handleMtouchEvent(screen_event_t event, screen_window_t window, int 
 #endif
 }
 
+void handleNavigatorEvent (bps_event_t *bps_event) {
+    switch(bps_event_get_code(bps_event)) {
+    case (NAVIGATOR_EXIT):
+    	SDL_PrivateQuit();
+    	break;
+    case (NAVIGATOR_BACK):
+		navkey.sym = SDLK_ESCAPE;
+    	SDL_PrivateKeyboard(SDL_PRESSED, &navkey);
+    	break;
+    case (NAVIGATOR_SWIPE_DOWN):
+		navkey.sym = SDLK_MENU;
+		SDL_PrivateKeyboard(SDL_PRESSED, &navkey);
+    	break;
+    case (NAVIGATOR_WINDOW_STATE):
+		switch(navigator_event_get_window_state(bps_event)) {
+		case NAVIGATOR_WINDOW_FULLSCREEN:
+			SDL_PrivateAppActive(1, (SDL_APPACTIVE|SDL_APPINPUTFOCUS|SDL_APPMOUSEFOCUS));
+			SDL_PauseAudio(0);
+			break;
+		case NAVIGATOR_WINDOW_THUMBNAIL:
+			SDL_PrivateAppActive(0, (SDL_APPINPUTFOCUS|SDL_APPMOUSEFOCUS));
+			SDL_PauseAudio(1);
+			break;
+		case NAVIGATOR_WINDOW_INVISIBLE:
+			SDL_PrivateAppActive(0, (SDL_APPACTIVE|SDL_APPINPUTFOCUS|SDL_APPMOUSEFOCUS));
+			SDL_PauseAudio(1);
+			break;
+		}
+    	break;
+    default:
+    	break;
+    }
+}
+
+void handleScreenEvent (bps_event_t *bps_event)
+{
+	int type;
+	screen_event_t screen_event = screen_event_get_event(bps_event);
+	screen_get_event_property_iv(screen_event, SCREEN_PROPERTY_TYPE, &type);
+
+	screen_window_t window;
+	screen_get_event_property_pv(screen_event, SCREEN_PROPERTY_WINDOW, (void **)&window);
+
+	switch (type) {
+	case SCREEN_EVENT_CLOSE:
+		SDL_PrivateQuit(); // We can't stop it from closing anyway
+		break;
+	case SCREEN_EVENT_POINTER:
+		handlePointerEvent(screen_event, window);
+		break;
+	case SCREEN_EVENT_KEYBOARD:
+		handleKeyboardEvent(screen_event);
+		break;
+	case SCREEN_EVENT_MTOUCH_TOUCH:
+	case SCREEN_EVENT_MTOUCH_MOVE:
+	case SCREEN_EVENT_MTOUCH_RELEASE:
+		handleMtouchEvent(screen_event, window, type);
+		break;
+	default:
+		break;
+	}
+}
+
 void
 PLAYBOOK_PumpEvents(_THIS)
 {
-	while (1)
-	{
-		int rc = screen_get_event(this->hidden->screenContext, this->hidden->screenEvent, 0 /*timeout*/);
-		if (rc)
-			break;
-
-		int type;
-		rc = screen_get_event_property_iv(this->hidden->screenEvent, SCREEN_PROPERTY_TYPE, &type);
-		if (rc || type == SCREEN_EVENT_NONE)
-			break;
-
-		screen_window_t window;
-		screen_get_event_property_pv(this->hidden->screenEvent, SCREEN_PROPERTY_WINDOW, (void **)&window);
-		if (!window && type != SCREEN_EVENT_KEYBOARD)
-			break;
-
-		switch (type)
-		{
-		case SCREEN_EVENT_CLOSE:
-			SDL_PrivateQuit(); // We can't stop it from closing anyway
-			break;
-		case SCREEN_EVENT_PROPERTY:
-			{
-				int val;
-				screen_get_event_property_iv(this->hidden->screenEvent, SCREEN_PROPERTY_NAME, &val);
-
-				//fprintf(stderr, "Property change (property val=%d)\n", val);
-			}
-			break;
-		case SCREEN_EVENT_POINTER:
-			handlePointerEvent(this->hidden->screenEvent, window);
-			break;
-		case SCREEN_EVENT_KEYBOARD:
-			handleKeyboardEvent(this->hidden->screenEvent);
-			break;
-		case SCREEN_EVENT_MTOUCH_TOUCH:
-		case SCREEN_EVENT_MTOUCH_MOVE:
-		case SCREEN_EVENT_MTOUCH_RELEASE:
-			handleMtouchEvent(this->hidden->screenEvent, window, type);
-			break;
-		}
+	if (navkey.sym) {
+		SDL_PrivateKeyboard(SDL_RELEASED, &navkey);
+		navkey.sym = 0;
 	}
+
+    bps_event_t *bps_event = NULL;
+    bps_get_event(&bps_event, 0);
+
+    while (bps_event) {
+		int domain = bps_event_get_domain(bps_event);
+
+		if (domain == screen_get_domain())
+			handleScreenEvent(bps_event);
+		else if (domain == navigator_get_domain())
+			handleNavigatorEvent(bps_event);
+
+	    bps_get_event(&bps_event, 0);
+    }
 
 #ifdef TOUCHPAD_SIMULATE
 	if (state.pending[0] || state.pending[1]) {

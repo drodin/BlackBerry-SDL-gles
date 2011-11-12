@@ -180,7 +180,20 @@ int Playbook_GL_Init(_THIS)
 void Playbook_GL_Quit(_THIS)
 {
 #if SDL_VIDEO_OPENGL
-
+    if (egl_disp != EGL_NO_DISPLAY) {
+        eglMakeCurrent(egl_disp, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        if (egl_surf != EGL_NO_SURFACE) {
+            eglDestroySurface(egl_disp, egl_surf);
+            egl_surf = EGL_NO_SURFACE;
+        }
+        if (egl_ctx != EGL_NO_CONTEXT) {
+            eglDestroyContext(egl_disp, egl_ctx);
+            egl_ctx = EGL_NO_CONTEXT;
+        }
+        eglTerminate(egl_disp);
+        egl_disp = EGL_NO_DISPLAY;
+    }
+    eglReleaseThread();
 #endif
 }
 
