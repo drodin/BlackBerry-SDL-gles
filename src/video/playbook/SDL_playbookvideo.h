@@ -28,6 +28,7 @@
 #include <screen/screen.h>
 #include <bps/bps.h>
 #include <bps/navigator.h>
+#include <bps/orientation.h>
 #include <bps/screen.h>
 
 /* Hidden "this" pointer for the video functions */
@@ -40,6 +41,8 @@
 
 struct SDL_PrivateVideoData {
     int w, h;
+    orientation_direction_t direction;
+    int orientation_angle;
     void *buffer;
     screen_context_t screenContext;
     screen_event_t screenEvent;

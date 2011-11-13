@@ -24,6 +24,7 @@
 #if defined(SDL_JOYSTICK_PLAYBOOK)
 
 #include <bps/accelerometer.h>
+#include <bps/orientation.h>
 
 /* This is the system specific header for the SDL joystick API */
 
@@ -35,7 +36,9 @@
 #define JDELTA 0.005f
 
 static int joystickReset = 0;
-static int orientation_angle = 0;
+
+orientation_direction_t direction;
+int orientation_angle;
 
 /* Function to scan the system for joysticks.
  * This function should set SDL_numjoysticks to the number of available
@@ -44,6 +47,8 @@ static int orientation_angle = 0;
  */
 int SDL_SYS_JoystickInit(void)
 {
+    orientation_get(&direction, &orientation_angle);
+
     accelerometer_set_update_frequency(FREQ_40_HZ);
 
 	SDL_numjoysticks = 1;
@@ -94,7 +99,7 @@ void SDL_SYS_JoystickUpdate(SDL_Joystick *joystick)
 	//Account for axis change due to different starting orientations
     if (orientation_angle == 180) {
         next_jx = -roll;
-    	next_jy = pitch;
+    	next_jy = -pitch;
     } else {
         next_jx = roll;
         next_jy = pitch;

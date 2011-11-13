@@ -157,28 +157,14 @@ int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
 		return -1;
 	}
 
-	screen_display_t displays[1] = {0};
-	rc = screen_get_context_property_pv(_priv->screenContext, SCREEN_PROPERTY_DISPLAYS, (void**)&displays);
-	if (rc) {
-		SDL_SetError("Cannot get current display: %s", strerror(errno));
-		screen_destroy_context(_priv->screenContext);
-		return -1;
-	}
-
-	int screenResolution[2];
-	rc = screen_get_display_property_iv(displays[0], SCREEN_PROPERTY_NATIVE_RESOLUTION, screenResolution);
-	if (rc) {
-		SDL_SetError("Cannot get native resolution: %s", strerror(errno));
-		screen_destroy_context(_priv->screenContext);
-		return -1;
-	}
-
     rc = bps_initialize();
 	if (rc) {
 		SDL_SetError("Cannot initializes the BPS library: %s", strerror(errno));
 		screen_destroy_context(_priv->screenContext);
 		return -1;
 	}
+
+    orientation_get(&_priv->direction, &_priv->orientation_angle);
 
     rc = navigator_request_events(0);
 	if (rc) {
@@ -276,6 +262,16 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 		SDL_SetError("Cannot position window: %s", strerror(errno));
 		screen_destroy_window(screenWindow);
 		return NULL;
+	}
+
+	if (_priv->orientation_angle == 90 || _priv->orientation_angle == 270) {
+		_priv->orientation_angle = 0;
+		rc = screen_set_window_property_iv(screenWindow, SCREEN_PROPERTY_ROTATION, &_priv->orientation_angle);
+		if (rc) {
+			SDL_SetError("Cannot set window rotation: %s", strerror(errno));
+			screen_destroy_window(screenWindow);
+			return NULL;
+		}
 	}
 
 	int idle_mode = SCREEN_IDLE_MODE_KEEP_AWAKE; // TODO: Handle idle gracefully?
