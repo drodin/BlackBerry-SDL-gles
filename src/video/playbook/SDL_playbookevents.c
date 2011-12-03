@@ -642,6 +642,9 @@ static void handleMtouchEvent(screen_event_t event, screen_window_t window, int 
 //
 //    fprintf(stderr, "Touch %d: (%d,%d) %c\n", contactId, pos[0], pos[1], typeChar);
 
+    if (contactId>0)
+    	return; //no multitouch
+
     if (pos[1] < 0) {
     	fprintf(stderr, "Detected swipe event: %d,%d\n", pos[0], pos[1]);
     	return;
