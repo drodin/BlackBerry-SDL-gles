@@ -152,320 +152,72 @@ static int TranslateVKB(int sym, int mods, int flags, int scan, int cap, SDL_key
 	if (mods & (0x1))
 		shifted = 1;
 
-	// FIXME: These scancodes are really just implemented this way for dosbox.
-	// See keyboard.cpp inside dosbox (KEYBOARD_AddKey) for a reference.
+	keysym->scancode = keysym->sym;
+	keysym->unicode = keysym->sym;
+
+	/*
 	switch (keysym->sym)
 	{
-	case SDLK_EXCLAIM:
-		shifted = 1;
-	case SDLK_1:
-		keysym->scancode = 2;
+	case SDLK_ASTERISK:
+		keysym->unicode = '*';
 		break;
 	case SDLK_AT:
-		shifted = 1;
-	case SDLK_2:
-		keysym->scancode = 3;
-		break;
-	case SDLK_HASH:
-		shifted = 1;
-	case SDLK_3:
-		keysym->scancode = 4;
-		break;
-	case SDLK_DOLLAR:
-		shifted = 1;
-	case SDLK_4:
-		keysym->scancode = 5;
-		break;
-	case SDLK_5:
-		keysym->scancode = 6;
-		break;
-	case SDLK_CARET:
-		shifted = 1;
-	case SDLK_6:
-		keysym->scancode = 7;
-		break;
-	case SDLK_AMPERSAND:
-		shifted = 1;
-	case SDLK_7:
-		keysym->scancode = 8;
-		break;
-	case SDLK_ASTERISK:
-		shifted = 1;
-	case SDLK_8:
-		keysym->scancode = 9;
-		break;
-	case SDLK_LEFTPAREN:
-		shifted = 1;
-	case SDLK_9:
-		keysym->scancode = 10;
-		break;
-	case SDLK_RIGHTPAREN:
-		shifted = 1;
-	case SDLK_0:
-		keysym->scancode = 11;
-		break;
-	case SDLK_UNDERSCORE:
-		shifted = 1;
-	case SDLK_MINUS:
-		keysym->scancode = 12;
-		break;
-	case SDLK_PLUS:
-		shifted = 1;
-	case SDLK_EQUALS:
-		keysym->scancode = 13;
-		break;
-	case SDLK_BACKSPACE:
-		keysym->scancode = 14;
-		break;
-	case SDLK_TAB:
-		keysym->scancode = 15;
-		break;
-	case SDLK_q:
-		keysym->scancode = 16;
-		break;
-	case SDLK_w:
-		keysym->scancode = 17;
-		break;
-	case SDLK_e:
-		keysym->scancode = 18;
-		break;
-	case SDLK_r:
-		keysym->scancode = 19;
-		break;
-	case SDLK_t:
-		keysym->scancode = 20;
-		break;
-	case SDLK_y:
-		keysym->scancode = 21;
-		break;
-	case SDLK_u:
-		keysym->scancode = 22;
-		break;
-	case SDLK_i:
-		keysym->scancode = 23;
-		break;
-	case SDLK_o:
-		keysym->scancode = 24;
-		break;
-	case SDLK_p:
-		keysym->scancode = 25;
-		break;
-	case SDLK_LEFTBRACKET:
-		keysym->scancode = 26;
-		break;
-	case SDLK_RIGHTBRACKET:
-		keysym->scancode = 27;
-		break;
-	case SDLK_RETURN:
-		keysym->scancode = 28;
-		break;
-	case SDLK_a:
-		keysym->scancode = 30;
-		break;
-	case SDLK_s:
-		keysym->scancode = 31;
-		break;
-	case SDLK_d:
-		keysym->scancode = 32;
-		break;
-	case SDLK_f:
-		keysym->scancode = 33;
-		break;
-	case SDLK_g:
-		keysym->scancode = 34;
-		break;
-	case SDLK_h:
-		keysym->scancode = 35;
-		break;
-	case SDLK_j:
-		keysym->scancode = 36;
-		break;
-	case SDLK_k:
-		keysym->scancode = 37;
-		break;
-	case SDLK_l:
-		keysym->scancode = 38;
-		break;
-	case SDLK_COLON:
-		shifted = 1;
-	case SDLK_SEMICOLON:
-		keysym->scancode = 39;
-		break;
-	case SDLK_QUOTEDBL:
-		shifted = 1;
-	case SDLK_QUOTE:
-		keysym->scancode = 40;
-		break;
-	case SDLK_BACKQUOTE:
-		keysym->scancode = 41;
-		break;
-	case SDLK_BACKSLASH:
-		keysym->scancode = 43;
-		break;
-	case SDLK_z:
-		keysym->scancode = 44;
-		break;
-	case SDLK_x:
-		keysym->scancode = 45;
-		break;
-	case SDLK_c:
-		keysym->scancode = 46;
-		break;
-	case SDLK_v:
-		keysym->scancode = 47;
-		break;
-	case SDLK_b:
-		keysym->scancode = 48;
-		break;
-	case SDLK_n:
-		keysym->scancode = 49;
-		break;
-	case SDLK_m:
-		keysym->scancode = 50;
-		break;
-	case SDLK_LESS:
-		shifted = 1;
-	case SDLK_COMMA:
-		keysym->scancode = 51;
-		break;
-	case SDLK_GREATER:
-		shifted = 1;
-	case SDLK_PERIOD:
-		keysym->scancode = 52;
-		break;
-	case SDLK_QUESTION:
-		shifted = 1;
-	case SDLK_SLASH:
-		keysym->scancode = 53;
-		break;
-	case SDLK_SPACE:
-		keysym->scancode = 57;
-		break;
-	}
-
-	switch (keysym->sym)
-	{
-	case SDLK_a:
-		keysym->unicode = 'a';
-		break;
-	case SDLK_b:
-		keysym->unicode = 'b';
-		break;
-	case SDLK_c:
-		keysym->unicode = 'c';
-		break;
-	case SDLK_d:
-		keysym->unicode = 'd';
-		break;
-	case SDLK_e:
-		keysym->unicode = 'e';
-		break;
-	case SDLK_f:
-		keysym->unicode = 'f';
-		break;
-	case SDLK_g:
-		keysym->unicode = 'g';
-		break;
-	case SDLK_h:
-		keysym->unicode = 'h';
-		break;
-	case SDLK_i:
-		keysym->unicode = 'i';
-		break;
-	case SDLK_j:
-		keysym->unicode = 'j';
-		break;
-	case SDLK_k:
-		keysym->unicode = 'k';
-		break;
-	case SDLK_l:
-		keysym->unicode = 'l';
-		break;
-	case SDLK_m:
-		keysym->unicode = 'm';
-		break;
-	case SDLK_n:
-		keysym->unicode = 'n';
-		break;
-	case SDLK_o:
-		keysym->unicode = 'o';
-		break;
-	case SDLK_p:
-		keysym->unicode = 'p';
-		break;
-	case SDLK_q:
-		keysym->unicode = 'q';
-		break;
-	case SDLK_r:
-		keysym->unicode = 'r';
-		break;
-	case SDLK_s:
-		keysym->unicode = 's';
-		break;
-	case SDLK_t:
-		keysym->unicode = 't';
-		break;
-	case SDLK_u:
-		keysym->unicode = 'u';
-		break;
-	case SDLK_v:
-		keysym->unicode = 'v';
-		break;
-	case SDLK_w:
-		keysym->unicode = 'w';
-		break;
-	case SDLK_x:
-		keysym->unicode = 'x';
-		break;
-	case SDLK_y:
-		keysym->unicode = 'y';
-		break;
-	case SDLK_z:
-		keysym->unicode = 'z';
-		break;
-	case SDLK_1:
-		keysym->unicode = '1';
-		break;
-	case SDLK_2:
-		keysym->unicode = '2';
-		break;
-	case SDLK_3:
-		keysym->unicode = '3';
-		break;
-	case SDLK_4:
-		keysym->unicode = '4';
-		break;
-	case SDLK_5:
-		keysym->unicode = '5';
-		break;
-	case SDLK_6:
-		keysym->unicode = '6';
-		break;
-	case SDLK_7:
-		keysym->unicode = '7';
-		break;
-	case SDLK_8:
-		keysym->unicode = '8';
-		break;
-	case SDLK_9:
-		keysym->unicode = '9';
-		break;
-	case SDLK_0:
-		keysym->unicode = '0';
-		break;
-	case SDLK_COMMA:
-		keysym->unicode = ',';
-		break;
-	case SDLK_PERIOD:
-		keysym->unicode = '.';
+		keysym->unicode = '@';
 		break;
 	case SDLK_COLON:
 		keysym->unicode = ':';
 		break;
+	case SDLK_COMMA:
+		keysym->unicode = ',';
+		break;
+	case SDLK_DOLLAR:
+		keysym->unicode = '$';
+		break;
+	case SDLK_EQUALS:
+		keysym->unicode = '=';
+		break;
+	case SDLK_EXCLAIM:
+		keysym->unicode = '!';
+		break;
+	case SDLK_HASH:
+		keysym->unicode = '#';
+		break;
+	case SDLK_LEFTBRACKET:
+		keysym->unicode = '(';
+		break;
+	case SDLK_MINUS:
+		keysym->unicode = '-';
+		break;
+	case SDLK_PERIOD:
+		keysym->unicode = '.';
+		break;
+	case SDLK_PLUS:
+		keysym->unicode = '+';
+		break;
+	case SDLK_QUESTION:
+		keysym->unicode = '?';
+		break;
+	case SDLK_QUOTE:
+		keysym->unicode = '\'';
+		break;
+	case SDLK_QUOTEDBL:
+		keysym->unicode = '"';
+		break;
+	case SDLK_RIGHTBRACKET:
+		keysym->unicode = ')';
+		break;
+	case SDLK_SEMICOLON:
+		keysym->unicode = ';';
+		break;
 	case SDLK_SLASH:
 		keysym->unicode = '/';
 		break;
+	case SDLK_UNDERSCORE:
+		keysym->unicode = '_';
+		break;
 	}
+	*/
+
 	keysym->mod = KMOD_NONE;
 	return shifted;
 }
@@ -642,8 +394,8 @@ static void handleMtouchEvent(screen_event_t event, screen_window_t window, int 
 //
 //    fprintf(stderr, "Touch %d: (%d,%d) %c\n", contactId, pos[0], pos[1], typeChar);
 
-    if (contactId>0)
-    	return; //no multitouch
+    if (contactId>1)
+    	return; //no triple multitouch
 
     if (pos[1] < 0) {
     	fprintf(stderr, "Detected swipe event: %d,%d\n", pos[0], pos[1]);
@@ -651,29 +403,30 @@ static void handleMtouchEvent(screen_event_t event, screen_window_t window, int 
     }
     static int touching = 0;
     if (type == SCREEN_EVENT_MTOUCH_TOUCH) {
-    	if (touching) {
-    		SDL_PrivateMouseMotion(SDL_BUTTON_LEFT, 0, pos[0], pos[1]);
-    	} else {
-    		SDL_PrivateMouseMotion(0, 0, pos[0], pos[1]);
+    	//if (touching) {
+    	//	SDL_PrivateMouseMotion(SDL_BUTTON_LEFT, 0, pos[0], pos[1]);
+    	//} else {
+    	//	SDL_PrivateMouseMotion(0, 0, pos[0], pos[1]);
     		SDL_PrivateMouseButton(SDL_PRESSED, SDL_BUTTON_LEFT, pos[0], pos[1]);
-    	}
+    	//}
     	moveEvent.pending = 0;
     	touching = 1;
     } else if (type == SCREEN_EVENT_MTOUCH_RELEASE) {
-    	if (touching) {
-    		SDL_PrivateMouseMotion(SDL_BUTTON_LEFT, 0, pos[0], pos[1]);
+    	//if (touching) {
+    	//	SDL_PrivateMouseMotion(SDL_BUTTON_LEFT, 0, pos[0], pos[1]);
     		SDL_PrivateMouseButton(SDL_RELEASED, SDL_BUTTON_LEFT, pos[0], pos[1]);
-    	} else {
-    		SDL_PrivateMouseMotion(0, 0, pos[0], pos[1]);
-    	}
+    	//} else {
+    	//	SDL_PrivateMouseMotion(0, 0, pos[0], pos[1]);
+    	//}
     	moveEvent.pending = 0;
     	touching = 0;
     } else if (type == SCREEN_EVENT_MTOUCH_MOVE) {
-    	moveEvent.pending = 1;
-    	moveEvent.touching = touching;
-    	moveEvent.pos[0] = pos[0];
-    	moveEvent.pos[1] = pos[1];
-    	//SDL_PrivateMouseMotion((touching?SDL_BUTTON_LEFT:0), 0, pos[0], pos[1]);
+    	//moveEvent.pending = 1;
+    	//moveEvent.touching = touching;
+    	//moveEvent.pos[0] = pos[0];
+    	//moveEvent.pos[1] = pos[1];
+    	moveEvent.pending = 0;
+    	SDL_PrivateMouseMotion((touching?SDL_BUTTON_LEFT:0), 0, pos[0], pos[1]);
     }
 
     // TODO: Possibly need more complicated touch handling
