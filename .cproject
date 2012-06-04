@@ -175,7 +175,7 @@
 							<builder buildPath="${workspace_loc:/SDL12/Device-Release}" id="com.qnx.nto.1038375346" keepEnvironmentInBuildfile="false" name="CDT Internal Builder" superClass="com.qnx.nto"/>
 							<tool id="com.qnx.qcc.tool.compiler.136853154" name="QCC Compiler" superClass="com.qnx.qcc.tool.compiler">
 								<option id="com.qnx.qcc.option.compiler.shared.409943591" name="Shared (-shared)" superClass="com.qnx.qcc.option.compiler.shared" value="true" valueType="boolean"/>
-								<option id="com.qnx.qcc.option.compiler.optlevel.1363045794" name="Optimization Level" superClass="com.qnx.qcc.option.compiler.optlevel" value="com.qnx.qcc.option.compiler.optlevel.2" valueType="enumerated"/>
+								<option id="com.qnx.qcc.option.compiler.optlevel.1363045794" name="Optimization Level" superClass="com.qnx.qcc.option.compiler.optlevel" value="com.qnx.qcc.option.compiler.optlevel.3" valueType="enumerated"/>
 								<option id="com.qnx.qcc.option.compiler.includePath.1545697999" name="Include Directories (-I)" superClass="com.qnx.qcc.option.compiler.includePath" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${QNX_TARGET}/../target-override/usr/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
@@ -205,6 +205,8 @@
 									<listOptionValue builtIn="false" value="${QNX_TARGET}/../target-override/${CPUVARDIR}/usr/lib"/>
 								</option>
 								<option id="com.qnx.qcc.option.linker.debug.1596689034" name="Debug (-g)" superClass="com.qnx.qcc.option.linker.debug" value="false" valueType="boolean"/>
+								<option id="com.qnx.qcc.option.linker.symbols.1666183158" superClass="com.qnx.qcc.option.linker.symbols" value="com.qnx.qcc.option.linker.symbols.none" valueType="enumerated"/>
+								<option id="com.qnx.qcc.option.linker.security.1686448991" superClass="com.qnx.qcc.option.linker.security" value="true" valueType="boolean"/>
 								<inputType id="com.qnx.qcc.inputType.linker.126797880" superClass="com.qnx.qcc.inputType.linker">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
