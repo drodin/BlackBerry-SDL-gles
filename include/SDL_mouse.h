@@ -119,7 +119,11 @@ extern DECLSPEC int SDLCALL SDL_ShowCursor(int toggle);
  *  Button 4:	Mouse wheel up	 (may also be a real button)
  *  Button 5:	Mouse wheel down (may also be a real button)
  */
+#ifndef __PLAYBOOK__
 #define SDL_BUTTON(X)		(1 << ((X)-1))
+#else
+#define SDL_BUTTON(X)		(X)
+#endif
 #define SDL_BUTTON_LEFT		1
 #define SDL_BUTTON_MIDDLE	2
 #define SDL_BUTTON_RIGHT	3

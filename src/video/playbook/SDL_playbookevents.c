@@ -52,7 +52,7 @@ static struct TouchState state = { {0, 0}, {0, 0}, 0, -1, 0, -1, 0, -1, 0, -1};
 #endif
 struct TouchEvent {
 	int pending;
-	int touching;
+	int touching[3];
 	int pos[2];
 };
 static struct TouchEvent moveEvent;
@@ -92,7 +92,7 @@ static void handlePointerEvent(screen_event_t event, screen_window_t window)
 	// FIXME: Pointer events have never been tested.
 	static int lastButtonState = 0;
 	if (lastButtonState == buttonState) {
-		moveEvent.touching = buttonState;
+		moveEvent.touching[0] = buttonState;
 		moveEvent.pos[0] = coords[0];
 		moveEvent.pos[1] = coords[1];
 		moveEvent.pending = 1;
@@ -372,64 +372,41 @@ static void handleMtouchEvent(screen_event_t event, screen_window_t window, int 
 #else
     int contactId;
     int pos[2];
+    /*
     int screenPos[2];
     int orientation;
     int pressure;
     long long timestamp;
     int sequenceId;
+    */
 
     screen_get_event_property_iv(event, SCREEN_PROPERTY_TOUCH_ID, (int*)&contactId);
     screen_get_event_property_iv(event, SCREEN_PROPERTY_SOURCE_POSITION, pos);
+    /*
     screen_get_event_property_iv(event, SCREEN_PROPERTY_POSITION, screenPos);
     screen_get_event_property_iv(event, SCREEN_PROPERTY_TOUCH_ORIENTATION, (int*)&orientation);
     screen_get_event_property_iv(event, SCREEN_PROPERTY_TOUCH_PRESSURE, (int*)&pressure); // Pointless - always 1 if down
     screen_get_event_property_llv(event, SCREEN_PROPERTY_TIMESTAMP, (long long*)&timestamp);
     screen_get_event_property_iv(event, SCREEN_PROPERTY_SEQUENCE_ID, (int*)&sequenceId);
+    */
 
-//    char typeChar = 'D';
-//    if (type == SCREEN_EVENT_MTOUCH_RELEASE)
-//    	typeChar = 'U';
-//    else if (type == SCREEN_EVENT_MTOUCH_MOVE)
-//    	typeChar = 'M';
-//
-//    fprintf(stderr, "Touch %d: (%d,%d) %c\n", contactId, pos[0], pos[1], typeChar);
-
-    if (contactId>1)
-    	return; //no triple multitouch
-
-    if (pos[1] < 0) {
-    	fprintf(stderr, "Detected swipe event: %d,%d\n", pos[0], pos[1]);
+    if (contactId>2 || pos[0] < 0 || pos[1] < 0)
     	return;
-    }
-    static int touching = 0;
-    if (type == SCREEN_EVENT_MTOUCH_TOUCH) {
-    	//if (touching) {
-    	//	SDL_PrivateMouseMotion(SDL_BUTTON_LEFT, 0, pos[0], pos[1]);
-    	//} else {
-    	//	SDL_PrivateMouseMotion(0, 0, pos[0], pos[1]);
-    		SDL_PrivateMouseButton(SDL_PRESSED, SDL_BUTTON_LEFT, pos[0], pos[1]);
-    	//}
-    	moveEvent.pending = 0;
-    	touching = 1;
-    } else if (type == SCREEN_EVENT_MTOUCH_RELEASE) {
-    	//if (touching) {
-    	//	SDL_PrivateMouseMotion(SDL_BUTTON_LEFT, 0, pos[0], pos[1]);
-    		SDL_PrivateMouseButton(SDL_RELEASED, SDL_BUTTON_LEFT, pos[0], pos[1]);
-    	//} else {
-    	//	SDL_PrivateMouseMotion(0, 0, pos[0], pos[1]);
-    	//}
-    	moveEvent.pending = 0;
-    	touching = 0;
-    } else if (type == SCREEN_EVENT_MTOUCH_MOVE) {
-    	//moveEvent.pending = 1;
-    	//moveEvent.touching = touching;
-    	//moveEvent.pos[0] = pos[0];
-    	//moveEvent.pos[1] = pos[1];
-    	moveEvent.pending = 0;
-    	SDL_PrivateMouseMotion((touching?SDL_BUTTON_LEFT:0), 0, pos[0], pos[1]);
-    }
 
-    // TODO: Possibly need more complicated touch handling
+    int SDLButton = contactId+1;
+
+    if (type == SCREEN_EVENT_MTOUCH_TOUCH) {
+    	if (!moveEvent.touching[contactId])
+    		SDL_PrivateMouseButton(SDL_PRESSED, SDLButton, pos[0], pos[1]);
+    	moveEvent.touching[contactId] = 1;
+    } else if (type == SCREEN_EVENT_MTOUCH_RELEASE) {
+    	if (moveEvent.touching[contactId])
+    		SDL_PrivateMouseButton(SDL_RELEASED, SDLButton, pos[0], pos[1]);
+    	moveEvent.touching[contactId] = 0;
+    } else if (type == SCREEN_EVENT_MTOUCH_MOVE) {
+    	if (moveEvent.touching[contactId])
+    		SDL_PrivateMouseMotion(SDLButton, 0, pos[0], pos[1]);
+    }
 #endif
 }
 
@@ -526,7 +503,7 @@ PLAYBOOK_PumpEvents(_THIS)
 	}
 #endif
 	if (moveEvent.pending) {
-		SDL_PrivateMouseMotion((moveEvent.touching?SDL_BUTTON_LEFT:0), 0, moveEvent.pos[0], moveEvent.pos[1]);
+		SDL_PrivateMouseMotion((moveEvent.touching[0]?SDL_BUTTON_LEFT:0), 0, moveEvent.pos[0], moveEvent.pos[1]);
 		moveEvent.pending = 0;
 	}
 }

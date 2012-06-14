@@ -244,7 +244,11 @@ int SDL_PrivateMouseButton(Uint8 state, Uint8 button, Sint16 x, Sint16 y)
 	}
 
 	/* Update internal mouse state */
+#ifndef __PLAYBOOK__
 	SDL_ButtonState = buttonstate;
+#else
+	SDL_ButtonState = button;
+#endif
 	if ( move_mouse ) {
 		SDL_MouseX = x;
 		SDL_MouseY = y;
