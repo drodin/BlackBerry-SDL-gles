@@ -38,6 +38,7 @@
 
 #include "SDL_video.h"
 #include "SDL_mouse.h"
+#include "SDL_syswm.h"
 #include "../SDL_sysvideo.h"
 #include "../SDL_pixels_c.h"
 #include "../../events/SDL_events_c.h"
@@ -72,6 +73,21 @@ static int PLAYBOOK_FillHWRect(_THIS, SDL_Surface *dst, SDL_Rect *rect, Uint32 c
 
 /* etc. */
 static void PLAYBOOK_UpdateRects(_THIS, int numrects, SDL_Rect *rects);
+
+static int PLAYBOOK_GetWMInfo(_THIS, SDL_SysWMinfo *info);
+
+/* get pid as window group id */
+char *
+get_window_group_id()
+{
+    static char s_window_group_id[16] = "";
+
+    if (s_window_group_id[0] == '\0') {
+        snprintf(s_window_group_id, sizeof(s_window_group_id), "%d", getpid());
+    }
+
+    return s_window_group_id;
+}
 
 /* PLAYBOOK driver bootstrap functions */
 
@@ -133,7 +149,7 @@ static SDL_VideoDevice *PLAYBOOK_CreateDevice(int devindex)
 	device->SetIcon = NULL;
 	device->IconifyWindow = NULL;
 	device->GrabInput = NULL;
-	device->GetWMInfo = NULL;
+	device->GetWMInfo = PLAYBOOK_GetWMInfo;
 	device->InitOSKeymap = PLAYBOOK_InitOSKeymap;
 	device->PumpEvents = PLAYBOOK_PumpEvents;
 
@@ -181,6 +197,11 @@ int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
 		screen_destroy_context(_priv->screenContext);
 		return -1;
 	}
+
+    paymentservice_request_events(0);
+#ifdef PAYMENT_LOCAL
+    paymentservice_set_connection_mode(true);
+#endif
 
 	_priv->screenWindow = 0;
 	_priv->surface = 0;
@@ -331,6 +352,13 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 	rc = screen_create_window_buffers(screenWindow, bufferCount);
 	if (rc) {
 		SDL_SetError("Cannot create window buffer: %s", strerror(errno));
+		return NULL;
+	}
+
+	_priv->windowGroup = get_window_group_id();
+	rc = screen_create_window_group(screenWindow, _priv->windowGroup);
+	if (rc) {
+		SDL_SetError("Cannot create window group: %s", strerror(errno));
 		return NULL;
 	}
 
@@ -568,6 +596,15 @@ static void PLAYBOOK_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
 	if (_priv->screenWindow && _priv->frontBuffer)
 		screen_post_window(_priv->screenWindow, _priv->frontBuffer, numrects, dirtyRects, 0);
 #endif
+}
+
+int PLAYBOOK_GetWMInfo(_THIS, SDL_SysWMinfo *info)
+{
+        SDL_VERSION(&(info->version));
+        info->window = _priv->screenWindow;
+        info->group = _priv->windowGroup;
+
+        return 1;
 }
 
 int PLAYBOOK_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors)

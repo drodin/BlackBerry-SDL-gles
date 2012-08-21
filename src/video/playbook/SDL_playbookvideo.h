@@ -28,6 +28,7 @@
 #include <screen/screen.h>
 #include <bps/bps.h>
 #include <bps/navigator.h>
+#include <bps/paymentservice.h>
 #include <bps/orientation.h>
 #include <bps/screen.h>
 
@@ -47,6 +48,7 @@ struct SDL_PrivateVideoData {
     screen_context_t screenContext;
     screen_event_t screenEvent;
     screen_window_t screenWindow;
+    char* windowGroup;
     screen_buffer_t frontBuffer;
     SDL_Surface *surface;
     void* pixels;

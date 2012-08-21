@@ -21,6 +21,7 @@
 */
 #include "SDL_config.h"
 #include "SDL.h"
+#include "SDL_syswm.h"
 #include "../../events/SDL_sysevents.h"
 #include "../../events/SDL_events_c.h"
 #include "SDL_keysym.h"
@@ -444,6 +445,38 @@ void handleNavigatorEvent (bps_event_t *bps_event) {
     }
 }
 
+void handlePaymentEvent (bps_event_t *bps_event)
+{
+    if (paymentservice_event_get_response_code(bps_event) == SUCCESS_RESPONSE) {
+        if (bps_event_get_code(bps_event) == PURCHASE_RESPONSE) {
+        	SDL_SysWMinfo info;
+    		SDL_GetWMInfo(&info);
+
+    		unsigned request_id;
+    		paymentservice_get_existing_purchases_request(false, info.group, &request_id);
+        } else {
+            int purchases = paymentservice_event_get_number_purchases(bps_event);
+
+            int i = 0;
+            for (i = 0; i<purchases; i++) {
+            	SDL_Event event;
+            	event.type = SDL_USEREVENT;
+            	event.user.code = 1;
+            	event.user.data1 = (void *)paymentservice_event_get_digital_good_id(bps_event, i);
+            	event.user.data2 = (void *)paymentservice_event_get_digital_good_sku(bps_event, i);
+            	SDL_PushEvent(&event);
+            }
+        }
+    } else {
+        unsigned request_id = paymentservice_event_get_request_id(bps_event);
+        int error_id = paymentservice_event_get_error_id(bps_event);
+        const char* error_text = paymentservice_event_get_error_text(bps_event);
+
+        fprintf(stderr, "Payment System error. Request ID: %d  Error ID: %d  Text: %s\n",
+                request_id, error_id, error_text ? error_text : "N/A");
+    }
+}
+
 void handleScreenEvent (bps_event_t *bps_event)
 {
 	int type;
@@ -453,9 +486,13 @@ void handleScreenEvent (bps_event_t *bps_event)
 	screen_window_t window;
 	screen_get_event_property_pv(screen_event, SCREEN_PROPERTY_WINDOW, (void **)&window);
 
+	SDL_SysWMinfo info;
+
 	switch (type) {
 	case SCREEN_EVENT_CLOSE:
-		SDL_PrivateQuit(); // We can't stop it from closing anyway
+		SDL_GetWMInfo(&info);
+		if (info.window == window)
+			SDL_PrivateQuit(); // We can't stop it from closing anyway
 		break;
 	case SCREEN_EVENT_POINTER:
 		handlePointerEvent(screen_event, window);
@@ -491,6 +528,8 @@ PLAYBOOK_PumpEvents(_THIS)
 			handleScreenEvent(bps_event);
 		else if (domain == navigator_get_domain())
 			handleNavigatorEvent(bps_event);
+		else if (domain == paymentservice_get_domain())
+			handlePaymentEvent(bps_event);
 
 	    bps_get_event(&bps_event, 0);
     }
