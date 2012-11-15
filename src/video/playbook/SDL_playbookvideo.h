@@ -36,14 +36,12 @@
 #define _THIS	SDL_VideoDevice *this
 #define _priv   this->hidden
 
-#define SDL_NUMMODES 3
+#define SDL_NUMMODES 1
 
 /* Private display data */
 
 struct SDL_PrivateVideoData {
     int w, h;
-    orientation_direction_t direction;
-    int orientation_angle;
     void *buffer;
     screen_context_t screenContext;
     screen_event_t screenEvent;
@@ -53,6 +51,7 @@ struct SDL_PrivateVideoData {
     SDL_Surface *surface;
     void* pixels;
     int pitch;
+    int screenResolution[2];
 
     SDL_Rect *SDL_modelist[SDL_NUMMODES+1];
 

@@ -180,8 +180,6 @@ int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
 		return -1;
 	}
 
-    orientation_get(&_priv->direction, &_priv->orientation_angle);
-
     rc = navigator_request_events(0);
 	if (rc) {
 		SDL_SetError("Cannot request navigator events: %s", strerror(errno));
@@ -211,11 +209,11 @@ int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
 		_priv->SDL_modelist[i]->x = _priv->SDL_modelist[i]->y = 0;
 	}
 
+	_priv->screenResolution[0] = atoi(getenv("WIDTH"));
+	_priv->screenResolution[1] = atoi(getenv("HEIGHT"));
 	/* Modes sorted largest to smallest */
-	_priv->SDL_modelist[0]->w = 1024; _priv->SDL_modelist[0]->h = 600;
-	_priv->SDL_modelist[1]->w = 800; _priv->SDL_modelist[1]->h = 576;
-	_priv->SDL_modelist[2]->w = 640; _priv->SDL_modelist[2]->h = 480;
-	_priv->SDL_modelist[3] = NULL;
+	_priv->SDL_modelist[0]->w = _priv->screenResolution[0]; _priv->SDL_modelist[0]->h = _priv->screenResolution[1];
+	_priv->SDL_modelist[1] = NULL;
 
 	/* Determine the screen depth (use default 32-bit depth) */
 	vformat->BitsPerPixel = 32;
@@ -231,9 +229,9 @@ int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	/* There is no window manager to talk to */
 	this->info.wm_available = 0;
 
-	/* Full screen size is 1024x600 */
-	this->info.current_w = 1024;
-	this->info.current_h = 600;
+	/* Full screen size */
+	this->info.current_w = _priv->screenResolution[0];
+	this->info.current_h = _priv->screenResolution[1];
 
 	/* We're done! */
 	return(0);
@@ -262,8 +260,6 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 	screen_window_t screenWindow;
 	int rc = 0;
 	fprintf(stderr, "SetVideoMode: %dx%d %dbpp\n", width, height, bpp);
-	if (width == 640 && height == 400)
-		height = 480;
 	if (!_priv->screenWindow) {
 		rc = screen_create_window(&screenWindow, _priv->screenContext);
 		if (rc) {
@@ -285,16 +281,6 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 		return NULL;
 	}
 
-	if (_priv->orientation_angle == 90 || _priv->orientation_angle == 270) {
-		_priv->orientation_angle = 0;
-		rc = screen_set_window_property_iv(screenWindow, SCREEN_PROPERTY_ROTATION, &_priv->orientation_angle);
-		if (rc) {
-			SDL_SetError("Cannot set window rotation: %s", strerror(errno));
-			screen_destroy_window(screenWindow);
-			return NULL;
-		}
-	}
-
 	int idle_mode = SCREEN_IDLE_MODE_KEEP_AWAKE; // TODO: Handle idle gracefully?
 	rc = screen_set_window_property_iv(screenWindow, SCREEN_PROPERTY_IDLE_MODE, &idle_mode);
 	if (rc) {
@@ -303,16 +289,14 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 		return NULL;
 	}
 
-	int sizeOfWindow[2] = {1024, 600};
-	rc = screen_set_window_property_iv(screenWindow, SCREEN_PROPERTY_SIZE, sizeOfWindow);
+	rc = screen_set_window_property_iv(screenWindow, SCREEN_PROPERTY_SIZE, _priv->screenResolution);
 	if (rc) {
 		SDL_SetError("Cannot resize window: %s", strerror(errno));
 		screen_destroy_window(screenWindow);
 		return NULL;
 	}
 
-	int sizeOfBuffer[2] = {width, height};
-	rc = screen_set_window_property_iv(screenWindow, SCREEN_PROPERTY_BUFFER_SIZE, sizeOfBuffer);
+	rc = screen_set_window_property_iv(screenWindow, SCREEN_PROPERTY_BUFFER_SIZE, _priv->screenResolution);
 	if (rc) {
 		SDL_SetError("Cannot resize window buffer: %s", strerror(errno));
 		screen_destroy_window(screenWindow);
@@ -338,7 +322,7 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 	}
 
 	if (flags & SDL_OPENGL)
-		usage = SCREEN_USAGE_OPENGL_ES1 | SCREEN_USAGE_ROTATION;
+		usage = SCREEN_USAGE_OPENGL_ES1 | SCREEN_USAGE_READ;
 	else
 		usage = SCREEN_USAGE_NATIVE | SCREEN_USAGE_READ | SCREEN_USAGE_WRITE;
 	rc = screen_set_window_property_iv(screenWindow, SCREEN_PROPERTY_USAGE, &usage);
@@ -362,6 +346,16 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 		return NULL;
 	}
 
+	_priv->screenWindow = screenWindow;
+
+	if ( flags & SDL_OPENGL ) {
+		if ( Playbook_GL_Init(this) == 0 ) {
+			current->flags |= SDL_OPENGL;
+		} else {
+			current = NULL;
+		}
+	}
+
 	screen_buffer_t windowBuffer[bufferCount];
 	rc = screen_get_window_property_pv(screenWindow,
 			SCREEN_PROPERTY_RENDER_BUFFERS, (void**)&windowBuffer);
@@ -383,15 +377,6 @@ SDL_Surface *PLAYBOOK_SetVideoMode(_THIS, SDL_Surface *current,
 	}
 
 	_priv->frontBuffer = windowBuffer[0];
-	_priv->screenWindow = screenWindow;
-
-	if ( flags & SDL_OPENGL ) {
-		if ( Playbook_GL_Init(this) == 0 ) {
-			current->flags |= SDL_OPENGL;
-		} else {
-			current = NULL;
-		}
-	}
 
 	screen_request_events(_priv->screenContext);
 
@@ -493,7 +478,10 @@ static void PLAYBOOK_UnlockHWSurface(_THIS, SDL_Surface *surface)
 static int PLAYBOOK_FlipHWSurface(_THIS, SDL_Surface *surface)
 {
 	// FIXME: This doesn't work properly yet. It flashes black, I think the new render buffers are wrong.
-	static int fullRect[] = {0, 0, 1024, 600};
+	static int fullRect[] = {0, 0, 0, 0};
+	fullRect[2] = _priv->screenResolution[0];
+	fullRect[3] = _priv->screenResolution[1];
+
 	//screen_flush_blits(_priv->screenContext, 0);
 	int result = screen_post_window(_priv->screenWindow, surface->hwdata->front, 1, fullRect, 0);
 
