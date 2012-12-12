@@ -26,8 +26,12 @@
 #include "../../events/SDL_events_c.h"
 #include "SDL_keysym.h"
 
-#include "SDL_playbookvideo.h"
 #include "SDL_playbookevents_c.h"
+
+SDL_Joystick *primaryJoystick = NULL;
+int joystickReset = 0;
+#define AXIS_MAX 32767
+#define JDELTA 0.005f
 
 static SDL_keysym Playbook_Keycodes[256];
 static SDLKey *Playbook_specialsyms;
@@ -74,7 +78,7 @@ static void handlePointerEvent(screen_event_t event, screen_window_t window)
 	screen_get_event_property_iv(event, SCREEN_PROPERTY_MOUSE_WHEEL, &wheel_delta);
 
 	if (coords[1] < 0) {
-		fprintf(stderr, "Detected pointer swipe event: %d,%d\n", coords[0], coords[1]);
+		//fprintf(stderr, "Detected pointer swipe event: %d,%d\n", coords[0], coords[1]);
 		return;
 	}
 	//fprintf(stderr, "Pointer: %d,(%d,%d),(%d,%d),%d\n", buttonState, coords[0], coords[1], screen_coords[0], screen_coords[1], wheel_delta);
@@ -510,6 +514,91 @@ void handleScreenEvent (bps_event_t *bps_event)
 	}
 }
 
+void handleSensorEvent(bps_event_t* bps_event) {
+if (primaryJoystick != NULL) {
+	if (SENSOR_AZIMUTH_PITCH_ROLL_READING == bps_event_get_code(bps_event)) {
+		static float next_jx, next_jy, prev_jx, prev_jy;
+
+		if (joystickReset) {
+			next_jx = 0.0f;
+			next_jy = 0.0f;
+			prev_jx = 0.0f;
+			prev_jy = 0.0f;
+			joystickReset = 0;
+		}
+
+		float azimnuth, pitch, roll;
+		sensor_event_get_apr(bps_event, &azimnuth, &pitch, &roll);
+
+		next_jx = pitch/90;
+		next_jy = roll/90;
+
+		//#define JOYKEYB_SIMULATE 1
+		#ifdef JOYKEYB_SIMULATE
+		static SDL_keysym last_xkeysym;
+		static SDL_keysym last_ykeysym;
+		const float jkdelta = 0.02f;
+		const unsigned jkxfixed = 1;
+		const unsigned jkyfixed = 0;
+
+		SDL_keysym xkeysym;
+		if (jkxfixed && (next_jx > jkdelta))
+			xkeysym.sym = SDLK_RIGHT;
+		else if (jkxfixed && (next_jx < -jkdelta))
+			xkeysym.sym = SDLK_LEFT;
+		else if (!jkxfixed && (next_jx > jkdelta + prev_jx))
+			xkeysym.sym = SDLK_RIGHT;
+		else if (!jkxfixed && (next_jx < -jkdelta + prev_jx))
+			xkeysym.sym = SDLK_LEFT;
+		else
+			xkeysym.sym = 0;
+
+		if (last_xkeysym.sym && last_xkeysym.sym != xkeysym.sym) {
+			SDL_PrivateKeyboard(SDL_RELEASED, &last_xkeysym);
+			last_xkeysym.sym = 0;
+		}
+
+		if (xkeysym.sym) {
+			SDL_PrivateKeyboard(SDL_PRESSED, &xkeysym);
+			last_xkeysym = xkeysym;
+		}
+
+		SDL_keysym ykeysym;
+		if (jkyfixed && (next_jy > jkdelta))
+			ykeysym.sym = SDLK_DOWN;
+		else if (jkyfixed && (next_jy < -jkdelta))
+			ykeysym.sym = SDLK_UP;
+		else if (!jkyfixed && (next_jy > jkdelta + prev_jy))
+			ykeysym.sym = SDLK_DOWN;
+		else if (!jkyfixed && (next_jy < -jkdelta + prev_jy))
+			ykeysym.sym = SDLK_UP;
+		else
+			ykeysym.sym = 0;
+
+		if (last_ykeysym.sym && last_ykeysym.sym != ykeysym.sym) {
+			SDL_PrivateKeyboard(SDL_RELEASED, &last_ykeysym);
+			last_ykeysym.sym = 0;
+		}
+
+		if (ykeysym.sym) {
+			SDL_PrivateKeyboard(SDL_PRESSED, &ykeysym);
+			last_ykeysym = ykeysym;
+		}
+		#else
+		if (fabs(next_jx) > (fabs(prev_jx)+JDELTA) || fabs(next_jx) < (fabs(prev_jx)-JDELTA)) {
+			SDL_PrivateJoystickAxis(primaryJoystick, 0, next_jx * AXIS_MAX);
+		}
+		if (fabs(next_jy) > (fabs(prev_jy)+JDELTA) || fabs(next_jy) < (fabs(prev_jy)-JDELTA)) {
+			SDL_PrivateJoystickAxis(primaryJoystick, 1, next_jy * AXIS_MAX);
+		}
+		#endif
+
+		prev_jy = next_jy;
+		prev_jx = next_jx;
+	}
+}
+}
+
 void
 PLAYBOOK_PumpEvents(_THIS)
 {
@@ -518,20 +607,22 @@ PLAYBOOK_PumpEvents(_THIS)
 		navkey.sym = 0;
 	}
 
-    bps_event_t *bps_event = NULL;
-    bps_get_event(&bps_event, 0);
+	bps_event_t *global_bps_event = NULL;
+    bps_get_event(&global_bps_event, 0);
 
-    while (bps_event) {
-		int domain = bps_event_get_domain(bps_event);
+    while (global_bps_event) {
+		int domain = bps_event_get_domain(global_bps_event);
 
 		if (domain == screen_get_domain())
-			handleScreenEvent(bps_event);
+			handleScreenEvent(global_bps_event);
 		else if (domain == navigator_get_domain())
-			handleNavigatorEvent(bps_event);
+			handleNavigatorEvent(global_bps_event);
 		else if (domain == paymentservice_get_domain())
-			handlePaymentEvent(bps_event);
+			handlePaymentEvent(global_bps_event);
+		else if (domain == sensor_get_domain())
+			handleSensorEvent(global_bps_event);
 
-	    bps_get_event(&bps_event, 0);
+	    bps_get_event(&global_bps_event, 0);
     }
 
 #ifdef TOUCHPAD_SIMULATE

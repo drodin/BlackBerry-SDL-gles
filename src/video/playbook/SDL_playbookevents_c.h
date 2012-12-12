@@ -23,11 +23,18 @@
 
 #include "SDL_playbookvideo.h"
 
+#include "SDL_joystick.h"
+#include "../../joystick/SDL_sysjoystick.h"
+#include "../../joystick/SDL_joystick_c.h"
+
 /* Variables and functions exported by SDL_sysevents.c to other parts 
    of the native video subsystem (SDL_sysvideo.c)
 */
 extern void PLAYBOOK_InitOSKeymap(_THIS);
 extern void PLAYBOOK_PumpEvents(_THIS);
+
+extern int joystickReset;
+extern SDL_Joystick *primaryJoystick;
 
 /* end of SDL_playbookevents_c.h ... */
 

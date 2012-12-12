@@ -201,6 +201,12 @@ int PLAYBOOK_VideoInit(_THIS, SDL_PixelFormat *vformat)
     paymentservice_set_connection_mode(true);
 #endif
 
+    if (sensor_is_supported(SENSOR_TYPE_AZIMUTH_PITCH_ROLL)) {
+        sensor_set_rate(SENSOR_TYPE_AZIMUTH_PITCH_ROLL, 25000);
+        sensor_set_skip_duplicates(SENSOR_TYPE_AZIMUTH_PITCH_ROLL, true);
+        sensor_request_events(SENSOR_TYPE_AZIMUTH_PITCH_ROLL);
+    }
+
 	_priv->screenWindow = 0;
 	_priv->surface = 0;
 

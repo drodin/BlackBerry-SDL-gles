@@ -25,11 +25,12 @@
 #define _SDL_playbookvideo_h
 
 #include "../SDL_sysvideo.h"
+#include <math.h>
 #include <screen/screen.h>
 #include <bps/bps.h>
 #include <bps/navigator.h>
 #include <bps/paymentservice.h>
-#include <bps/orientation.h>
+#include <bps/sensor.h>
 #include <bps/screen.h>
 
 /* Hidden "this" pointer for the video functions */
